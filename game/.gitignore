@@ -1,0 +1,11 @@
+# Godot 4+ specific ignores
+.godot/
+/android/
+
+# Local tooling and generated exports
+.tmp_video_deps/
+output/
+demo/
+
+# Local interview question banks
+docs/interview/question-bank/

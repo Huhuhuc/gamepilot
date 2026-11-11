@@ -1,0 +1,40 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scence/pickup.gd" id="1_pickup"]
+[ext_resource type="AudioStream" path="res://resources/audio/cowboy_powerup.wav" id="2_audio"]
+[ext_resource type="Shader" path="res://resources/config/blink.gdshader" id="3_shader"]
+[ext_resource type="Resource" path="res://resources/config/pickup_rapid.tres" id="4_config"]
+[ext_resource type="Texture2D" path="res://resources/texture/道具ui.png" id="5_texture"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_blink"]
+resource_local_to_scene = true
+shader = ExtResource("3_shader")
+shader_parameter/blink_enabled = false
+shader_parameter/blink_speed = 12.0
+shader_parameter/hidden_ratio = 0.5
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_default"]
+atlas = ExtResource("5_texture")
+region = Rect2(0, 48, 16, 16)
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_pickup"]
+radius = 8.0
+
+[node name="Pickup" type="Area2D" unique_id=895246653]
+collision_mask = 2
+script = ExtResource("1_pickup")
+config = ExtResource("4_config")
+
+[node name="Sprite2D" type="Sprite2D" parent="." unique_id=203436710]
+material = SubResource("ShaderMaterial_blink")
+texture = SubResource("AtlasTexture_default")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=308800897]
+shape = SubResource("CircleShape2D_pickup")
+
+[node name="LifetimeTimer" type="Timer" parent="." unique_id=1459014463]
+wait_time = 10.0
+one_shot = true
+
+[node name="AudioStreamPlayer" type="AudioStreamPlayer" parent="." unique_id=545731777]
+stream = ExtResource("2_audio")

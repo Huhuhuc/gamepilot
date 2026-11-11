@@ -1,0 +1,14 @@
+{
+  "game": {
+    "repo": "Huhuhuc/2dshootgame",
+    "commit": "1ce73ad946302e61e87060d4a9a3ef44d4af106a"
+  },
+  "plugin": {
+    "repo": "edbeeching/godot_rl_agents_plugin",
+    "commit": "998c357a0cd09b37f40a36d70c7867fc9f682338"
+  },
+  "python_reference": {
+    "repo": "edbeeching/godot_rl_agents",
+    "commit": "207b6f476f5846f33d08b92c7a350147e7b78bf5"
+  }
+}

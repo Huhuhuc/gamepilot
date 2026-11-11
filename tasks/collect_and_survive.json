@@ -1,0 +1,13 @@
+{
+  "task_id": "collect_and_survive",
+  "version": 1,
+  "title": "Collect one pickup and survive the round",
+  "difficulty": "original",
+  "deadline_seconds": 60,
+  "objectives": [
+    {"type": "pickups", "target": 1},
+    {"type": "survive_seconds", "target": 60}
+  ],
+  "constraints": {},
+  "evaluation": {"start_seed": 2000, "episodes": 30}
+}

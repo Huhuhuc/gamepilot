@@ -1,0 +1,12 @@
+{
+  "task_id": "kill_target",
+  "version": 1,
+  "title": "Defeat 20 enemies before the deadline",
+  "difficulty": "original",
+  "deadline_seconds": 60,
+  "objectives": [
+    {"type": "kills", "target": 20}
+  ],
+  "constraints": {},
+  "evaluation": {"start_seed": 2000, "episodes": 30}
+}

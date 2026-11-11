@@ -1,0 +1,180 @@
+[gd_scene format=4]
+
+[ext_resource type="Script" path="res://scence/game.gd" id="1_game"]
+[ext_resource type="Texture2D" path="res://resources/texture/瓦片.png" id="1_tqpm0"]
+[ext_resource type="Texture2D" path="res://resources/texture/动态瓦片.png" id="2_nkw88"]
+[ext_resource type="PackedScene" path="res://scence/Player.tscn" id="3_nkw88"]
+[ext_resource type="PackedScene" path="res://scence/pickup.tscn" id="4_cxjg4"]
+[ext_resource type="Resource" path="res://resources/config/pickup_speed.tres" id="8_speed"]
+[ext_resource type="Resource" path="res://resources/config/pickup_spiral.tres" id="9_spiral"]
+[ext_resource type="PackedScene" path="res://scence/hud.tscn" id="10_hud"]
+[ext_resource type="AudioStream" path="res://resources/audio/1-27 Journey of the Prairie King (Overworld).mp3" id="11_music"]
+[ext_resource type="AudioStream" path="res://resources/audio/Cowboy_Secret.wav" id="12_ui"]
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_xhmcv"]
+texture = ExtResource("1_tqpm0")
+0:0/0 = 0
+1:0/0 = 0
+1:0/0/physics_layer_0/polygon_0/points = PackedVector2Array(-8, -8, 8, -8, 8, 8, -8, 8)
+2:0/0 = 0
+2:0/0/physics_layer_0/polygon_0/points = PackedVector2Array(-8, -8, 8, -8, 8, 8, -8, 8)
+0:1/0 = 0
+0:1/0/physics_layer_0/polygon_0/points = PackedVector2Array(-8, -8, 8, -8, 8, 8, -8, 8)
+1:1/0 = 0
+2:1/0 = 0
+0:2/0 = 0
+0:2/0/physics_layer_0/polygon_0/points = PackedVector2Array(-8, -8, 8, -8, 8, 8, -8, 8)
+1:2/0 = 0
+2:2/0 = 0
+3:2/0 = 0
+3:2/0/physics_layer_0/polygon_0/points = PackedVector2Array(-8, -8, 8, -8, 8, 8, -8, 8)
+2:3/0 = 0
+2:3/0/physics_layer_0/polygon_0/points = PackedVector2Array(-8, -8, 8, -8, 8, 8, -8, 8)
+3:3/0 = 0
+3:3/0/physics_layer_0/polygon_0/points = PackedVector2Array(-8, -8, 8, -8, 8, 8, -8, 8)
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_vqmr0"]
+texture = ExtResource("2_nkw88")
+0:2/animation_speed = 2.0
+0:2/animation_mode = 1
+0:2/animation_frame_0/duration = 1.0
+0:2/animation_frame_1/duration = 1.0
+0:2/animation_frame_2/duration = 1.0
+0:2/animation_frame_3/duration = 1.0
+0:2/0 = 0
+0:2/0/physics_layer_0/polygon_0/points = PackedVector2Array(-8, -8, 8, -8, 8, 8, -8, 8)
+0:3/animation_speed = 8.0
+0:3/animation_mode = 1
+0:3/animation_frame_0/duration = 1.0
+0:3/animation_frame_1/duration = 1.0
+0:3/animation_frame_2/duration = 1.0
+0:3/animation_frame_3/duration = 1.0
+0:3/0 = 0
+0:3/0/physics_layer_0/polygon_0/points = PackedVector2Array(-8, -8, 8, -8, 8, 8, -8, 8)
+0:4/animation_speed = 8.0
+0:4/animation_mode = 1
+0:4/animation_frame_0/duration = 1.0
+0:4/animation_frame_1/duration = 1.0
+0:4/animation_frame_2/duration = 1.0
+0:4/animation_frame_3/duration = 1.0
+0:4/0 = 0
+0:4/0/physics_layer_0/polygon_0/points = PackedVector2Array(-8, -8, 8, -8, 8, 8, -8, 8)
+0:5/animation_speed = 8.0
+0:5/animation_frame_0/duration = 1.0
+0:5/animation_frame_1/duration = 1.0
+0:5/animation_frame_2/duration = 1.0
+0:5/animation_frame_3/duration = 1.0
+0:5/0 = 0
+0:5/0/physics_layer_0/polygon_0/points = PackedVector2Array(-8, -8, 8, -8, 8, 8, -8, 8)
+
+[sub_resource type="TileSet" id="TileSet_lc15j"]
+physics_layer_0/collision_layer = 1
+sources/0 = SubResource("TileSetAtlasSource_xhmcv")
+sources/1 = SubResource("TileSetAtlasSource_vqmr0")
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_bq8l2"]
+texture = ExtResource("2_nkw88")
+texture_region_size = Vector2i(16, 32)
+0:0/animation_speed = 4.0
+0:0/animation_frame_0/duration = 1.0
+0:0/animation_frame_1/duration = 1.0
+0:0/animation_frame_2/duration = 1.0
+0:0/animation_frame_3/duration = 1.0
+0:0/0 = 0
+
+[sub_resource type="TileSet" id="TileSet_hcud1"]
+sources/0 = SubResource("TileSetAtlasSource_bq8l2")
+
+[sub_resource type="SegmentShape2D" id="SegmentShape2D_nkw88"]
+b = Vector2(256, 0)
+
+[sub_resource type="SegmentShape2D" id="SegmentShape2D_xhmcv"]
+b = Vector2(0, 256)
+
+[sub_resource type="SegmentShape2D" id="SegmentShape2D_vqmr0"]
+a = Vector2(0, 256)
+b = Vector2(256, 256)
+
+[sub_resource type="SegmentShape2D" id="SegmentShape2D_lc15j"]
+a = Vector2(256, 0)
+b = Vector2(256, 256)
+
+[node name="Game" type="Node2D" unique_id=534740396]
+script = ExtResource("1_game")
+
+[node name="Camera2D" type="Camera2D" parent="." unique_id=774657334]
+offset = Vector2(128, 128)
+zoom = Vector2(2, 2)
+
+[node name="GroundTileMapLayer" type="TileMapLayer" parent="." unique_id=1441795818]
+tile_map_data = PackedByteArray("AAAAAAAAAQAAAAIAAAAAAAEAAAADAAIAAAAAAAIAAAADAAMAAAAAAAMAAQAAAAIAAAAAAAQAAQAAAAIAAAAAAAUAAQAAAAIAAAAAAAYAAQAAAAIAAAAAAAcAAAACAAAAAAAAAAgAAAAAAAAAAAAAAAkAAAAAAAAAAAAAAAoAAQAAAAIAAAAAAAsAAQAAAAIAAAAAAAwAAAADAAIAAAAAAA0AAAADAAMAAAAAAA4AAQAAAAIAAAAAAA8AAQAAAAIAAAABAAAAAQAAAAQAAAABAAEAAQAAAAIAAAABAAIAAAAAAAAAAAABAAMAAAAAAAAAAAABAAQAAAAAAAAAAAABAAUAAAAAAAAAAAABAAYAAAAAAAAAAAABAAcAAAAAAAAAAAABAAgAAAAAAAAAAAABAAkAAAAAAAAAAAABAAoAAAAAAAAAAAABAAsAAAAAAAAAAAABAAwAAAAAAAAAAAABAA0AAAAAAAAAAAABAA4AAQAAAAMAAAABAA8AAQAAAAIAAAACAAAAAAACAAMAAAACAAEAAQAAAAIAAAACAAIAAAAAAAAAAAACAAMAAAACAAIAAAACAAQAAAACAAMAAAACAAUAAAAAAAAAAAACAAYAAAAAAAAAAAACAAcAAAABAAIAAAACAAgAAAAAAAAAAAACAAkAAAACAAEAAAACAAoAAAAAAAAAAAACAAsAAAAAAAAAAAACAAwAAAAAAAAAAAACAA0AAAAAAAAAAAACAA4AAAACAAMAAAACAA8AAQAAAAIAAAADAAAAAAACAAMAAAADAAEAAAABAAIAAAADAAIAAAABAAIAAAADAAMAAAAAAAAAAAADAAQAAAACAAMAAAADAAUAAAAAAAAAAAADAAYAAAAAAAAAAAADAAcAAAAAAAAAAAADAAgAAAAAAAAAAAADAAkAAAACAAEAAAADAAoAAAACAAEAAAADAAsAAAACAAEAAAADAAwAAAAAAAAAAAADAA0AAAAAAAAAAAADAA4AAAAAAAAAAAADAA8AAQAAAAIAAAAEAAAAAAABAAAAAAAEAAEAAAAAAAAAAAAEAAIAAAAAAAAAAAAEAAMAAAAAAAAAAAAEAAQAAAAAAAAAAAAEAAUAAAAAAAAAAAAEAAYAAAAAAAAAAAAEAAcAAAAAAAAAAAAEAAgAAAACAAEAAAAEAAkAAAACAAEAAAAEAAoAAAAAAAAAAAAEAAsAAAAAAAAAAAAEAAwAAAAAAAAAAAAEAA0AAAAAAAAAAAAEAA4AAAAAAAAAAAAEAA8AAQAAAAIAAAAFAAAAAQAAAAUAAAAFAAEAAAAAAAAAAAAFAAIAAAAAAAAAAAAFAAMAAAAAAAAAAAAFAAQAAAAAAAAAAAAFAAUAAAAAAAAAAAAFAAYAAAAAAAAAAAAFAAcAAAAAAAAAAAAFAAgAAAAAAAAAAAAFAAkAAAACAAEAAAAFAAoAAAAAAAAAAAAFAAsAAAAAAAAAAAAFAAwAAAAAAAAAAAAFAA0AAAAAAAAAAAAFAA4AAAAAAAAAAAAFAA8AAQAAAAIAAAAGAAAAAQAAAAUAAAAGAAEAAAAAAAAAAAAGAAIAAAAAAAAAAAAGAAMAAAAAAAAAAAAGAAQAAAAAAAAAAAAGAAUAAAABAAEAAAAGAAYAAAAAAAAAAAAGAAcAAAAAAAAAAAAGAAgAAAAAAAAAAAAGAAkAAAAAAAAAAAAGAAoAAAAAAAAAAAAGAAsAAAAAAAAAAAAGAAwAAAAAAAAAAAAGAA0AAAAAAAAAAAAGAA4AAAAAAAAAAAAGAA8AAAABAAAAAAAHAAAAAQAAAAUAAAAHAAEAAAAAAAAAAAAHAAIAAAAAAAAAAAAHAAMAAAAAAAAAAAAHAAQAAAAAAAAAAAAHAAUAAAAAAAAAAAAHAAYAAAAAAAAAAAAHAAcAAAACAAMAAAAHAAgAAAACAAMAAAAHAAkAAAAAAAAAAAAHAAoAAAAAAAAAAAAHAAsAAAAAAAAAAAAHAAwAAAAAAAAAAAAHAA0AAAAAAAAAAAAHAA4AAAAAAAAAAAAHAA8AAAACAAMAAAAIAAAAAQAAAAIAAAAIAAEAAAAAAAAAAAAIAAIAAAAAAAAAAAAIAAMAAAAAAAAAAAAIAAQAAAABAAEAAAAIAAUAAAAAAAAAAAAIAAYAAAAAAAAAAAAIAAcAAAACAAMAAAAIAAgAAAACAAMAAAAIAAkAAAAAAAAAAAAIAAoAAAAAAAAAAAAIAAsAAAABAAIAAAAIAAwAAAAAAAAAAAAIAA0AAAAAAAAAAAAIAA4AAAAAAAAAAAAIAA8AAAAAAAAAAAAJAAAAAQAAAAMAAAAJAAEAAAAAAAAAAAAJAAIAAAAAAAAAAAAJAAMAAAABAAIAAAAJAAQAAAAAAAAAAAAJAAUAAAAAAAAAAAAJAAYAAAAAAAAAAAAJAAcAAAAAAAAAAAAJAAgAAAAAAAAAAAAJAAkAAAAAAAAAAAAJAAoAAAAAAAAAAAAJAAsAAAABAAEAAAAJAAwAAAABAAIAAAAJAA0AAAAAAAAAAAAJAA4AAAAAAAAAAAAJAA8AAAAAAAAAAAAKAAAAAAABAAAAAAAKAAEAAAAAAAAAAAAKAAIAAAAAAAAAAAAKAAMAAAABAAEAAAAKAAQAAAABAAEAAAAKAAUAAAABAAEAAAAKAAYAAAAAAAAAAAAKAAcAAAAAAAAAAAAKAAgAAAAAAAAAAAAKAAkAAAAAAAAAAAAKAAoAAAAAAAAAAAAKAAsAAAAAAAAAAAAKAAwAAAAAAAAAAAAKAA0AAAAAAAAAAAAKAA4AAAAAAAAAAAAKAA8AAQAAAAIAAAALAAAAAQAAAAIAAAALAAEAAAAAAAAAAAALAAIAAAACAAAAAAALAAMAAAAAAAAAAAALAAQAAAAAAAAAAAALAAUAAAAAAAAAAAALAAYAAAAAAAAAAAALAAcAAAAAAAAAAAALAAgAAAAAAAAAAAALAAkAAAAAAAAAAAALAAoAAAAAAAAAAAALAAsAAAACAAIAAAALAAwAAAACAAMAAAALAA0AAAAAAAAAAAALAA4AAAAAAAAAAAALAA8AAQAAAAUAAAAMAAAAAQAAAAIAAAAMAAEAAAAAAAAAAAAMAAIAAAAAAAAAAAAMAAMAAAAAAAAAAAAMAAQAAAAAAAAAAAAMAAUAAAAAAAAAAAAMAAYAAAAAAAAAAAAMAAcAAAAAAAAAAAAMAAgAAAABAAEAAAAMAAkAAAAAAAAAAAAMAAoAAAAAAAAAAAAMAAsAAAAAAAAAAAAMAAwAAAACAAMAAAAMAA0AAAAAAAAAAAAMAA4AAAAAAAAAAAAMAA8AAQAAAAUAAAANAAAAAAAAAAIAAAANAAEAAAACAAMAAAANAAIAAAAAAAAAAAANAAMAAAAAAAAAAAANAAQAAAAAAAAAAAANAAUAAAAAAAAAAAANAAYAAAAAAAAAAAANAAcAAAAAAAAAAAANAAgAAAACAAEAAAANAAkAAAAAAAAAAAANAAoAAAAAAAAAAAANAAsAAAAAAAAAAAANAAwAAAAAAAAAAAANAA0AAAABAAIAAAANAA4AAAACAAMAAAANAA8AAQAAAAIAAAAOAAAAAQAAAAQAAAAOAAEAAAACAAMAAAAOAAIAAQAAAAUAAAAOAAMAAAACAAIAAAAOAAQAAAAAAAAAAAAOAAUAAAAAAAAAAAAOAAYAAAAAAAAAAAAOAAcAAAAAAAAAAAAOAAgAAAAAAAAAAAAOAAkAAAAAAAAAAAAOAAoAAAAAAAAAAAAOAAsAAAAAAAAAAAAOAAwAAAAAAAAAAAAOAA0AAAACAAMAAAAOAA4AAAACAAMAAAAOAA8AAQAAAAIAAAAPAAAAAAADAAIAAAAPAAEAAAADAAMAAAAPAAIAAAADAAIAAAAPAAMAAAADAAMAAAAPAAQAAAADAAIAAAAPAAUAAAADAAMAAAAPAAYAAQAAAAIAAAAPAAcAAAACAAAAAAAPAAgAAAAAAAAAAAAPAAkAAAAAAAAAAAAPAAoAAQAAAAQAAAAPAAsAAQAAAAQAAAAPAAwAAQAAAAMAAAAPAA0AAQAAAAIAAAAPAA4AAQAAAAIAAAAPAA8AAQAAAAIAAAA=")
+tile_set = SubResource("TileSet_lc15j")
+
+[node name="OverlayTileMapLayer" type="TileMapLayer" parent="." unique_id=171499835]
+tile_map_data = PackedByteArray("AAAAAAgAAAAAAAAAAAAAAAkAAAAAAAAAAAAPAAgAAAAAAAAAAAAPAAkAAAAAAAAAAAA=")
+tile_set = SubResource("TileSet_hcud1")
+
+[node name="Player" parent="." unique_id=164826857 instance=ExtResource("3_nkw88")]
+position = Vector2(111, 87)
+
+[node name="EnemyContainer" type="Node2D" parent="." unique_id=1992852125]
+
+[node name="EnemySpawnPoints" type="Node2D" parent="." unique_id=286035165]
+
+[node name="SpawnLeft" type="Marker2D" parent="EnemySpawnPoints" unique_id=418608923 groups=["EnemySpawnPoints"]]
+position = Vector2(16, 128)
+
+[node name="SpawnRight" type="Marker2D" parent="EnemySpawnPoints" unique_id=99517445 groups=["EnemySpawnPoints"]]
+position = Vector2(240, 128)
+
+[node name="SpawnTop" type="Marker2D" parent="EnemySpawnPoints" unique_id=659476747 groups=["EnemySpawnPoints"]]
+position = Vector2(128, 16)
+
+[node name="SpawnBottom" type="Marker2D" parent="EnemySpawnPoints" unique_id=889282848 groups=["EnemySpawnPoints"]]
+position = Vector2(128, 240)
+
+[node name="EnemySpawnTimer" type="Timer" parent="." unique_id=1845870914]
+
+[node name="HUDLayer" parent="." unique_id=1325171510 instance=ExtResource("10_hud")]
+position = Vector2(-8, -24)
+
+[node name="BackgroundMusic" type="AudioStreamPlayer" parent="." unique_id=1692815355]
+stream = ExtResource("11_music")
+volume_db = -8.0
+
+[node name="UiSound" type="AudioStreamPlayer" parent="." unique_id=902041816]
+stream = ExtResource("12_ui")
+volume_db = -4.0
+
+[node name="PickupRapid" parent="." unique_id=1937432471 instance=ExtResource("4_cxjg4")]
+position = Vector2(128, 160)
+
+[node name="PickupSpeed" parent="." unique_id=1956186528 instance=ExtResource("4_cxjg4")]
+position = Vector2(96, 128)
+config = ExtResource("8_speed")
+
+[node name="PickupSpiral" parent="." unique_id=266542124 instance=ExtResource("4_cxjg4")]
+position = Vector2(160, 128)
+config = ExtResource("9_spiral")
+
+[node name="WordBounds" type="Node2D" parent="." unique_id=1164770192]
+
+[node name="TopBounds" type="StaticBody2D" parent="WordBounds" unique_id=174188653]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="WordBounds/TopBounds" unique_id=1167666427]
+shape = SubResource("SegmentShape2D_nkw88")
+
+[node name="LeftBounds" type="StaticBody2D" parent="WordBounds" unique_id=2088962863]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="WordBounds/LeftBounds" unique_id=428512596]
+shape = SubResource("SegmentShape2D_xhmcv")
+
+[node name="BottomBounds" type="StaticBody2D" parent="WordBounds" unique_id=853554850]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="WordBounds/BottomBounds" unique_id=1122646419]
+shape = SubResource("SegmentShape2D_vqmr0")
+
+[node name="RightBounds" type="StaticBody2D" parent="WordBounds" unique_id=267532536]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="WordBounds/RightBounds" unique_id=650219138]
+shape = SubResource("SegmentShape2D_lc15j")

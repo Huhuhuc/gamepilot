@@ -1,0 +1,12 @@
+{
+  "task_id": "survive_damage_limit",
+  "version": 1,
+  "title": "Survive while taking no more than two damage",
+  "difficulty": "original",
+  "deadline_seconds": 60,
+  "objectives": [
+    {"type": "survive_seconds", "target": 60}
+  ],
+  "constraints": {"max_damage": 2},
+  "evaluation": {"start_seed": 2000, "episodes": 30}
+}

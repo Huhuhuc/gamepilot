@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="EnemyConfig" format=3]
+
+[ext_resource type="Script" path="res://resources/config/enemy_config.gd" id="1_cfg"]
+[ext_resource type="Resource" path="res://resources/config/pickup_rapid.tres" id="2_drop"]
+[ext_resource type="SpriteFrames" path="res://resources/config/enemy_fast_frames.tres" id="3_frames"]
+
+[resource]
+script = ExtResource("1_cfg")
+enemy_type = 2
+display_name = "快速敌人"
+max_health = 1
+move_speed = 95.0
+collision_radius = 7.0
+enemy_frames = ExtResource("3_frames")
+touch_damage = 1
+touch_damage_interval = 0.5
+start_blink_duration = 0.16
+explode_on_death = false
+explosion_damage = 0
+explosion_radius = 0.0
+pickup_drop_chance = 0.08
+pickup_drop_configs = Array[Resource]([ExtResource("2_drop")])

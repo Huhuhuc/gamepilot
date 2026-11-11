@@ -1,0 +1,87 @@
+[gd_scene load_steps=8 format=3]
+
+[ext_resource type="Script" path="res://scence/hud.gd" id="1_hud"]
+[ext_resource type="Texture2D" path="res://resources/texture/道具ui.png" id="2_ui"]
+[ext_resource type="FontFile" path="res://resources/font/IPix.ttf" id="3_font"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_life"]
+atlas = ExtResource("2_ui")
+region = Rect2(0, 16, 16, 16)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_time"]
+atlas = ExtResource("2_ui")
+region = Rect2(0, 0, 16, 16)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxDialog"]
+bg_color = Color(0.15, 0.15, 0.18, 0.96)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.42, 0.42, 0.48, 1)
+corner_radius_top_left = 2
+corner_radius_top_right = 2
+corner_radius_bottom_right = 2
+corner_radius_bottom_left = 2
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxButton"]
+bg_color = Color(0.22, 0.22, 0.27, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.82, 0.82, 0.86, 1)
+corner_radius_top_left = 2
+corner_radius_top_right = 2
+corner_radius_bottom_right = 2
+corner_radius_bottom_left = 2
+
+[node name="HUDLayer" type="Node2D"]
+z_index = 100
+script = ExtResource("1_hud")
+
+[node name="LifeIcon" type="Sprite2D" parent="."]
+texture = SubResource("AtlasTexture_life")
+position = Vector2(18, 16)
+
+[node name="LifeCountLabel" type="Label" parent="."]
+offset_left = 28.0
+offset_top = 8.0
+offset_right = 72.0
+offset_bottom = 27.0
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_fonts/font = ExtResource("3_font")
+theme_override_font_sizes/font_size = 14
+text = "x 5"
+
+[node name="TimeIcon" type="Sprite2D" parent="."]
+texture = SubResource("AtlasTexture_time")
+position = Vector2(76, 16)
+
+[node name="TimeBar" type="ProgressBar" parent="."]
+offset_left = 86.0
+offset_top = 12.0
+offset_right = 224.0
+offset_bottom = 22.0
+theme_override_fonts/font = ExtResource("3_font")
+theme_override_font_sizes/font_size = 8
+value = 100.0
+show_percentage = false
+
+[node name="AcceptDialog" type="AcceptDialog" parent="."]
+process_mode = 3
+offset_left = 16.0
+offset_top = 42.0
+offset_right = 240.0
+offset_bottom = 190.0
+theme_override_fonts/font = ExtResource("3_font")
+theme_override_font_sizes/font_size = 16
+theme_override_styles/panel = SubResource("StyleBoxDialog")
+theme_override_styles/normal = SubResource("StyleBoxButton")
+theme_override_constants/margin_left = 14
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 14
+theme_override_constants/margin_bottom = 12
+title = "游戏结果"
+dialog_text = "强！？强"
+ok_button_text = "好了"
