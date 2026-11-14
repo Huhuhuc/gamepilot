@@ -7,6 +7,6 @@ game/.godot/
 runs/
 .env
 game/resources/audio/
-game/resources/font/*.ttf
-game/resources/texture/*.png
+game/resources/font/
+game/resources/texture/
 game/output_pickup_grid.png
