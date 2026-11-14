@@ -347,6 +347,7 @@ def main():
     llm.add_argument("--max-repeat", type=int, default=60)
     llm.add_argument("--max-requests-per-episode", type=int, default=60)
     llm.add_argument("--max-tokens-per-episode", type=int)
+    llm.add_argument("--history-window", type=int, default=4)
     llm.add_argument("--visible", action="store_true")
     llm.add_argument("--output", required=True)
     paired = commands.add_parser("compare-task-runs")
@@ -373,6 +374,7 @@ def main():
         if args.max_requests_per_episode < 1: parser.error("max-requests-per-episode must be positive")
         if args.max_tokens_per_episode is not None and args.max_tokens_per_episode < 1:
             parser.error("max-tokens-per-episode must be positive")
+        if not 0 <= args.history_window <= 16: parser.error("history-window must be 0..16")
         tasks_to_run = load_tasks(args.task_dir)
         tasks_to_run = [task for task in tasks_to_run if args.task_id is None or task.task_id == args.task_id]
         if not tasks_to_run: raise ValueError(f"unknown task_id: {args.task_id}")
@@ -381,13 +383,16 @@ def main():
         output.mkdir(parents=True, exist_ok=False)
         agent = TaskAgent(ChatProvider(settings), max_repeat=args.max_repeat,
             max_requests_per_episode=args.max_requests_per_episode,
-            max_tokens_per_episode=args.max_tokens_per_episode)
+            max_tokens_per_episode=args.max_tokens_per_episode,
+            history_window=args.history_window)
         result = {"provider": settings.provider, "model": settings.model,
             "base_url": settings.safe_base_url, "code_sha256": fingerprint(),
             "created_at": datetime.now(timezone.utc).isoformat(),
             "request_budget_per_episode": args.max_requests_per_episode,
             "token_budget_per_episode": args.max_tokens_per_episode,
-            "max_repeat": args.max_repeat, "request_timeout_seconds": settings.timeout_seconds,
+            "max_repeat": args.max_repeat, "history_window": args.history_window,
+            "request_timeout_seconds": settings.timeout_seconds,
+            "max_completion_tokens_per_request": settings.max_completion_tokens,
             "tasks": []}
         for task in tasks_to_run:
             start = args.start_seed if args.start_seed is not None else task.start_seed
@@ -410,16 +415,19 @@ def main():
         rows = []
         for record in result["tasks"]:
             success_rate = "-" if record["success_rate"] is None else f'{record["success_rate"]:.1%}'
+            invalid_reasons = "; ".join(f'{reason}: {count}'
+                                         for reason, count in record["invalid_reasons"].items()) or "-"
             rows.append(f'<tr><td>{html.escape(record["task_id"])}</td>'
                 f'<td>{record["successes"]}/{record["eligible_episodes"]} ({success_rate})</td>'
-                f'<td>{record["invalid_episodes"]}</td><td>{record["mean_model_latency_seconds"]:.2f}s</td>'
+                f'<td>{record["invalid_episodes"]}</td><td>{html.escape(invalid_reasons)}</td>'
+                f'<td>{record["mean_model_latency_seconds"]:.2f}s</td>'
                 f'<td>{record["total_model_requests"]}</td><td>{record["total_prompt_tokens"] + record["total_completion_tokens"]}</td></tr>')
         report = ('<!doctype html><html lang="zh"><meta charset="utf-8"><title>GamePilot LLM Agent</title>'
             '<style>body{background:#f5f0e8;color:#25221e;font:16px system-ui;margin:48px auto;max-width:1050px;padding:20px}'
             'h1{border-left:5px solid #c56b32;padding-left:16px}table{width:100%;border-collapse:collapse}'
             'td,th{text-align:left;padding:12px;border-bottom:1px solid #d5ccc0}</style>'
             f'<h1>GamePilot · LLM 游戏任务 Agent</h1><p>Provider: {html.escape(settings.provider)} · Model: {html.escape(settings.model)}</p>'
-            '<table><tr><th>任务</th><th>成功率</th><th>无效局</th><th>模型延迟</th><th>请求数</th><th>Token 数</th></tr>'
+            '<table><tr><th>任务</th><th>成功率</th><th>无效局</th><th>无效原因</th><th>模型延迟</th><th>请求数</th><th>Token 数</th></tr>'
             + ''.join(rows) + '</table><p>无效局不计入成功率；成绩由游戏事件和任务 grader 决定。逐局数据见 episodes.csv / results.json。</p></html>')
         (output / "report.html").write_text(report, encoding="utf-8")
     elif args.command == "compare-task-runs":

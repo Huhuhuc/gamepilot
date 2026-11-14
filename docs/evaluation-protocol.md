@@ -26,11 +26,14 @@ The comparison command refuses different task hashes, missing/duplicate seeds, a
 
 Each command refuses to overwrite an existing output directory. Keep each policy's output with the task hash, code hash, model identity, and run date. Do not combine data across code or task hashes without an explicit migration.
 
+For LLM runs, also keep `history_window`, `max_repeat`, per-call completion limit, request/token budgets, and provider timeout from `results.json` with the benchmark. These settings change the agent's context and interaction budget, so comparisons must hold them fixed when measuring model or prompt changes.
+
 ## Metrics
 
 - Task success rate is `success / (success + failure)`. Invalid provider/engine runs and externally truncated episodes are excluded and reported separately.
 - Include failure reasons, completion time, damage, kills, pickups, request count, latency, and provider-reported token counts.
 - Report invalid-episode rate beside task success rate. A model that frequently times out must not look artificially strong because failed requests disappeared from the denominator.
+- Preserve invalid reasons separately from game failure reasons; budget exhaustion, provider errors, and execution faults are not game losses.
 - Model requests are counted before transport, so failed HTTP calls and repair attempts are included.
 - Token budgets use provider-reported usage. Providers that omit token usage are still bounded by request and timeout limits; do not infer unreported tokens.
 - A one-seed run is an integration smoke only. Use the task's default 30 episodes as a first comparison set, then add seeds for uncertainty analysis before making broad capability claims.

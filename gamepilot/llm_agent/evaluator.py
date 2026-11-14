@@ -37,6 +37,8 @@ def evaluate_episode(agent: TaskAgent, task: TaskSpec, *, seed: int, visible: bo
         previous_action = previous_grade = None
         decision_index = 0
         while True:
+            before_obs = obs.copy()
+            before_info = dict(info)
             action, call_usage = agent.decide(task, obs, info, decision_index=decision_index,
                                               previous_action=previous_action,
                                               previous_grade=previous_grade)
@@ -57,6 +59,9 @@ def evaluate_episode(agent: TaskAgent, task: TaskSpec, *, seed: int, visible: bo
             decision_record["executed_repeat"] = repeat_index + 1
             decision_record["execution_seconds"] = time.monotonic() - decision_started
             decisions.append(decision_record)
+            agent.record_transition(before_obs=before_obs, before_info=before_info,
+                action=action, after_obs=obs, after_info=info, grade=grade,
+                executed_repeat=repeat_index + 1)
             previous_action = {"move": action.move, "shoot": action.shoot,
                                "requested_repeat": action.repeat,
                                "executed_repeat": repeat_index + 1}
@@ -88,7 +93,8 @@ def evaluate_episode(agent: TaskAgent, task: TaskSpec, *, seed: int, visible: bo
            "wall_seconds": round(time.monotonic() - started, 3)}
     if trace_path:
         trace = {**row, "decisions": decisions, "actions": actions,
-                 "rewards": rewards, "states": states}
+                 "rewards": rewards, "states": states,
+                 "recent_action_outcomes": agent.history}
         Path(trace_path).write_text(json.dumps(trace, ensure_ascii=False, indent=2), encoding="utf-8")
     return row
 
@@ -120,4 +126,6 @@ def evaluate_task_agent(agent: TaskAgent, task: TaskSpec, *, seeds, visible: boo
             "total_completion_tokens": sum(r["completion_tokens"] for r in rows),
             "failure_reasons": {reason: sum(r["task_reason"] == reason for r in rows)
                                 for reason in sorted({r["task_reason"] for r in rows if r["task_status"] == "failure"})},
+            "invalid_reasons": {reason: sum(r["task_reason"] == reason for r in rows)
+                                for reason in sorted({r["task_reason"] for r in rows if r["task_status"] == "invalid"})},
             "rows": rows}

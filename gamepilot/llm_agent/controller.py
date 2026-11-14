@@ -8,7 +8,7 @@ import time
 from ..tasks import TaskSpec
 
 
-SYSTEM_PROMPT = """You control a real 2D survival shooter through the step_game tool. Complete the supplied task using only the current structured observation. Do not claim success; the environment will verify it. Call exactly one step_game tool each turn. Directions: 0=stay/none, 1=right, 2=down-right, 3=down, 4=down-left, 5=left, 6=up-left, 7=up, 8=up-right. Screen y increases downward. For shooting, 0 means do not shoot. Keep every repeat batch within the declared limit. The observation contains normalized player state, six nearest enemies, two nearest pickups, and eight wall distances; missing entities are zero-filled. Enemy and pickup type names are decoded from the game's enums. Choose actions that make progress while preserving health."""
+SYSTEM_PROMPT = """You control a real 2D survival shooter. You MUST call step_game exactly once and return no prose. The environment verifies task success. Direction indices: 0=stay/no shot, 1=right, 2=down-right, 3=down, 4=down-left, 5=left, 6=up-left, 7=up, 8=up-right; screen y increases downward. move and shoot are direction indices, not counts. repeat is the number of identical game actions and must stay within the supplied limit. Use the current structured observation and bounded recent measured outcomes to complete the objective and preserve health. Missing entities are omitted from the nearest-enemy/pickup lists. Enemy and pickup types use names decoded from game enums."""
 ENEMY_TYPES = {0: "basic", 1: "shelled", 2: "fast_small", 3: "bomber"}
 PICKUP_TYPES = {0: "speed", 1: "rapid_fire", 2: "spiral_shot"}
 
@@ -57,7 +57,8 @@ def observation_summary(obs, info: dict) -> dict:
 
 class TaskAgent:
     def __init__(self, provider, *, max_repeat: int = 60, repair_attempts: int = 1,
-                 max_requests_per_episode: int = 60, max_tokens_per_episode: int | None = None):
+                 max_requests_per_episode: int = 60, max_tokens_per_episode: int | None = None,
+                 history_window: int = 4):
         if not 1 <= max_repeat <= 120:
             raise ValueError("max_repeat must be between 1 and 120")
         if repair_attempts not in (0, 1):
@@ -66,16 +67,46 @@ class TaskAgent:
             raise ValueError("max_requests_per_episode must be positive")
         if max_tokens_per_episode is not None and max_tokens_per_episode < 1:
             raise ValueError("max_tokens_per_episode must be positive when set")
+        if not 0 <= history_window <= 16:
+            raise ValueError("history_window must be between 0 and 16")
         self.provider = provider
         self.max_repeat = max_repeat
         self.repair_attempts = repair_attempts
         self.max_requests_per_episode = max_requests_per_episode
         self.max_tokens_per_episode = max_tokens_per_episode
+        self.history_window = history_window
         self.reset_episode()
 
     def reset_episode(self):
         self.usage = {"prompt_tokens": 0, "completion_tokens": 0, "model_requests": 0,
                       "repair_attempts": 0, "model_latency_seconds": 0.0}
+        self.history = []
+
+    @staticmethod
+    def _memory_snapshot(obs, info):
+        state = observation_summary(obs, info)
+        return {"seconds": info.get("seconds"), "health": info.get("health"),
+                "damage": info.get("damage"), "kills": info.get("kills"),
+                "pickups_collected": info.get("pickups_collected"),
+                "nearest_enemy_types": [enemy["type"] for enemy in state["nearest_enemies"]],
+                "nearest_pickup_types": [pickup["type"] for pickup in state["nearest_pickups"]]}
+
+    def record_transition(self, *, before_obs, before_info, action, after_obs, after_info,
+                          grade, executed_repeat):
+        if self.history_window == 0:
+            return
+        before = self._memory_snapshot(before_obs, before_info)
+        after = self._memory_snapshot(after_obs, after_info)
+        deltas = {}
+        for key in ("seconds", "health", "damage", "kills", "pickups_collected"):
+            if isinstance(before[key], (int, float)) and isinstance(after[key], (int, float)):
+                deltas[key] = after[key] - before[key]
+        self.history.append({"action": {"move": action.move, "shoot": action.shoot,
+                                         "requested_repeat": action.repeat,
+                                         "executed_repeat": executed_repeat},
+                             "before": before, "after": after, "delta": deltas,
+                             "task_status": grade["status"], "task_reason": grade["reason"]})
+        self.history = self.history[-self.history_window:]
 
     def decide(self, task: TaskSpec, obs, info: dict, *, decision_index: int,
                previous_action: dict | None = None, previous_grade: dict | None = None):
@@ -86,6 +117,7 @@ class TaskAgent:
                         "decision_index": decision_index,
                         "previous_action": previous_action,
                         "previous_task_status": previous_grade,
+                        "recent_history": self.history,
                         "state": observation_summary(obs, info),
                         "tool_limits": {"max_repeat": self.max_repeat}}
         messages = [{"role": "system", "content": SYSTEM_PROMPT},

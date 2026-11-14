@@ -35,16 +35,19 @@ flowchart LR
 2. The runner resets the real game with the requested seed and summarizes player state, nearby enemies/pickups, and wall distances.
 3. The provider returns exactly one `step_game` call. Movement/shoot indices must be integers in 0–8, and `repeat` must be in the configured range.
 4. The runner executes the bounded action batch one environment step at a time. After each step it runs the deterministic grader and stops immediately on task success/failure, natural termination, truncation, or execution error.
-5. The next request receives fresh state and the prior action/result summary. The runner does not retain hidden reasoning or trust a model claim that a goal is complete.
+5. The next request receives fresh state and a configurable bounded window of recent action/outcome summaries, including measured health, damage, kills, pickups, and task status deltas. Memory resets for each episode; hidden reasoning is not retained or sent back.
 6. Each episode writes an auditable trace and metrics. Provider, malformed-tool, budget and game failures remain distinct categories.
 
 ## Reliability and Cost Controls
 
 - Provider timeout: `GAMEPILOT_LLM_TIMEOUT_SECONDS`, between 1 and 600 seconds.
+- Completion length: 768 tokens per provider call by default; `GAMEPILOT_LLM_MAX_COMPLETION_TOKENS` can set 64–8192. Ollama uses `/api/chat` with a JSON Schema action format and `options.num_predict`; the runner parses and validates the action before execution. OpenAI-compatible providers keep native function calling and force the `step_game` tool choice.
 - Model calls: 60 per episode by default; configurable through `--max-requests-per-episode`.
 - Token budget: optional `--max-tokens-per-episode`, based on provider-reported usage. If a provider omits usage, request limits still apply.
 - Tool repair: one additional model request for malformed arguments, included in request/token accounting.
+- Short-term memory: four action/outcome summaries per episode by default, configurable from 0 to 16; includes only measured state and task progress.
 - API keys are read from `GAMEPILOT_LLM_API_KEY`; result files record a sanitized base URL without user info or query values.
 - Failed requests remain counted and their raw response bodies are not written to traces.
+- Aggregate reports separate game failure reasons from invalid-episode reasons (provider, budget, validation, or execution errors).
 
 The first implementation is single process/single game. It uses structured state, not image input, does not train foundation models, and does not execute code proposed by the model.

@@ -23,6 +23,7 @@ class ProviderSettings:
     base_url: str
     api_key: str | None = None
     timeout_seconds: float = 90.0
+    max_completion_tokens: int = 768
 
     @property
     def safe_base_url(self) -> str:
@@ -54,7 +55,13 @@ class ProviderSettings:
             raise ValueError("GAMEPILOT_LLM_TIMEOUT_SECONDS must be a number") from None
         if not math.isfinite(timeout_seconds) or not 1 <= timeout_seconds <= 600:
             raise ValueError("GAMEPILOT_LLM_TIMEOUT_SECONDS must be between 1 and 600")
-        return cls(provider, model, base_url, api_key, timeout_seconds)
+        try:
+            max_completion_tokens = int(os.getenv("GAMEPILOT_LLM_MAX_COMPLETION_TOKENS", "768"))
+        except ValueError:
+            raise ValueError("GAMEPILOT_LLM_MAX_COMPLETION_TOKENS must be an integer") from None
+        if not 64 <= max_completion_tokens <= 8192:
+            raise ValueError("GAMEPILOT_LLM_MAX_COMPLETION_TOKENS must be between 64 and 8192")
+        return cls(provider, model, base_url, api_key, timeout_seconds, max_completion_tokens)
 
 
 @dataclass(frozen=True)
@@ -70,26 +77,27 @@ class ChatProvider:
         self.settings = settings
 
     def call_tool(self, messages: list[dict], *, max_repeat: int) -> ChatResult:
-        tool = {"type": "function", "function": {
-            "name": "step_game",
-            "description": "Apply one bounded batch of movement and firing in the current game state.",
-            "parameters": {"type": "object", "additionalProperties": False,
-                "properties": {
-                    "move": {"type": "integer", "minimum": 0, "maximum": 8},
-                    "shoot": {"type": "integer", "minimum": 0, "maximum": 8},
-                    "repeat": {"type": "integer", "minimum": 1, "maximum": max_repeat}},
-                "required": ["move", "shoot", "repeat"]}}}
         if self.settings.provider == "ollama":
-            url = self.settings.base_url + "/api/chat"
-            payload = {"model": self.settings.model, "messages": messages, "tools": [tool], "stream": False}
+            url = self.settings.base_url
+            url += "/chat" if url.endswith("/api") else "/api/chat"
+            payload = {"model": self.settings.model, "messages": messages,
+                       "stream": False, "think": False,
+                       "format": self._action_schema(max_repeat),
+                       "options": {"num_predict": self.settings.max_completion_tokens}}
         else:
+            tool = {"type": "function", "function": {
+                "name": "step_game",
+                "description": "Apply one bounded batch of movement and firing in the current game state.",
+                "parameters": self._action_schema(max_repeat)}}
             url = self.settings.base_url
             if url.endswith("/v1"):
                 url += "/chat/completions"
             elif not url.endswith("/chat/completions"):
                 url += "/v1/chat/completions"
+            tool_choice = {"type": "function", "function": {"name": "step_game"}}
             payload = {"model": self.settings.model, "messages": messages, "tools": [tool],
-                       "tool_choice": "required", "stream": False}
+                       "tool_choice": tool_choice,
+                       "max_tokens": self.settings.max_completion_tokens, "stream": False}
         headers = {"Content-Type": "application/json"}
         if self.settings.api_key:
             headers["Authorization"] = "Bearer " + self.settings.api_key
@@ -114,20 +122,17 @@ class ChatProvider:
             message = envelope.get("message")
             if not isinstance(message, dict):
                 raise ProviderError("missing_message")
-            calls = message.get("tool_calls") or []
-            if not isinstance(calls, list):
-                raise ProviderError("invalid_tool_calls")
-            normalized = {"role": "assistant", "content": message.get("content", "")}
-            if calls:
-                normalized["tool_calls"] = []
-                for index, call in enumerate(calls):
-                    if not isinstance(call, dict) or not isinstance(call.get("function"), dict):
-                        raise ProviderError("invalid_tool_call_shape")
-                    fn = call["function"]
-                    normalized["tool_calls"].append({"id": f"ollama-{index}", "type": "function",
-                        "function": {"name": fn.get("name"),
-                                     "arguments": json.dumps(fn.get("arguments", {}), ensure_ascii=False)}})
+            content = message.get("content", "")
+            if not isinstance(content, str):
+                raise ProviderError("invalid_message_content")
             usage = self._usage(envelope.get("prompt_eval_count", 0), envelope.get("eval_count", 0))
+            normalized = {"role": "assistant", "content": content}
+            try:
+                arguments = json.loads(content)
+            except json.JSONDecodeError:
+                # Let TaskAgent apply its single bounded repair attempt.
+                arguments = content
+            return ChatResult("step_game", arguments, normalized, usage)
         else:
             choices = envelope.get("choices")
             if not isinstance(choices, list) or not choices or not isinstance(choices[0], dict):
@@ -163,3 +168,12 @@ class ChatProvider:
         if any(value < 0 for value in values.values()):
             raise ProviderError("invalid_usage")
         return values
+
+    @staticmethod
+    def _action_schema(max_repeat: int) -> dict:
+        return {"type": "object", "additionalProperties": False,
+                "properties": {
+                    "move": {"type": "integer", "minimum": 0, "maximum": 8},
+                    "shoot": {"type": "integer", "minimum": 0, "maximum": 8},
+                    "repeat": {"type": "integer", "minimum": 1, "maximum": max_repeat}},
+                "required": ["move", "shoot", "repeat"]}

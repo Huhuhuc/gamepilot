@@ -79,19 +79,20 @@ flowchart LR
 
 ## LLM 游戏任务 Agent
 
-`evaluate-llm` 是独立于 PPO 的工具调用 Agent。模型每轮只能请求 `step_game(move, shoot, repeat)`；参数由本地严格校验，runner 在每个游戏步后检查任务完成/死亡，模型不能重置环境、改种子或自行报告成功。首版读取与 PPO 相同的 76 维结构化状态，不读图像、不训练模型。
+`evaluate-llm` 是独立于 PPO 的工具调用 Agent。模型每轮只能请求 `step_game(move, shoot, repeat)`；参数由本地严格校验，runner 在每个游戏步后检查任务完成/死亡，模型不能重置环境、改种子或自行报告成功。首版读取与 PPO 相同的 76 维结构化状态，不读图像、不训练模型。每局默认向模型提供最近 4 次的动作、状态变化和任务结果摘要，可用 `--history-window 0..16` 调整；不保存或回传模型思维过程，跨局会清空记忆。
 
-支持本地 Ollama 和 OpenAI 兼容的 Chat Completions 接口。PowerShell 示例：
+支持两种动作接口：本地 Ollama 使用 `/api/chat` 的 JSON Schema 约束动作输出，runner 解析、严格校验后执行；OpenAI-compatible 服务使用原生 function calling。Ollama 的结构化输出不等同于模型自主调用工具。PowerShell 示例：
 
 ```powershell
 $env:GAMEPILOT_LLM_PROVIDER = "ollama"
-$env:GAMEPILOT_LLM_MODEL = "qwen3:4b" # 换成 Ollama 中已经安装且支持工具调用的模型
+$env:GAMEPILOT_LLM_MODEL = "qwen3:4b" # 换成 Ollama 中已经安装且支持结构化输出的模型
 # 可选：$env:GAMEPILOT_LLM_BASE_URL = "http://127.0.0.1:11434"
 # 可选：$env:GAMEPILOT_LLM_TIMEOUT_SECONDS = "90"
+# 可选：$env:GAMEPILOT_LLM_MAX_COMPLETION_TOKENS = "768"
 .\.venv\Scripts\python.exe -m gamepilot.experiment evaluate-llm --task-id kill_target --episodes 1 --start-seed 2000 --output runs/llm-smoke
 ```
 
-兼容云端服务时设置 `GAMEPILOT_LLM_PROVIDER=openai_compatible`、`GAMEPILOT_LLM_BASE_URL`、`GAMEPILOT_LLM_MODEL` 和 `GAMEPILOT_LLM_API_KEY`。密钥只从进程环境读取；报告中的服务地址会去除用户信息和查询参数。每局有默认 60 次请求上限，可用 `--max-requests-per-episode` 调整；可选 `--max-tokens-per-episode` 限制服务端报告的 Token 总数，单次请求超时可用 `GAMEPILOT_LLM_TIMEOUT_SECONDS` 设置为 1–600 秒。报告记录任务结果、工具调用、延迟、失败请求数和服务端 token 用量；API/参数错误及预算耗尽计为无效 episode，不记成游戏失败。最多对格式错误的工具调用修复一次。
+兼容云端服务时设置 `GAMEPILOT_LLM_PROVIDER=openai_compatible`、`GAMEPILOT_LLM_BASE_URL`、`GAMEPILOT_LLM_MODEL` 和 `GAMEPILOT_LLM_API_KEY`。密钥只从进程环境读取；报告中的服务地址会去除用户信息和查询参数。云端请求强制选择 `step_game` function；Ollama 请求以动态 `repeat` 上限生成严格 JSON Schema，并通过 `options.num_predict` 限制生成长度。单次生成默认最多 768 token，可用 `GAMEPILOT_LLM_MAX_COMPLETION_TOKENS` 设置为 64–8192；每局有默认 60 次请求上限，可用 `--max-requests-per-episode` 调整；可选 `--max-tokens-per-episode` 限制服务端报告的 Token 总数，单次请求超时可用 `GAMEPILOT_LLM_TIMEOUT_SECONDS` 设置为 1–600 秒。报告记录任务结果、动作、延迟、失败请求数和服务端 token 用量；API/参数错误及预算耗尽计为无效 episode，不记成游戏失败。最多对格式错误的动作输出修复一次。
 
 任务矩阵示例：
 
@@ -114,6 +115,8 @@ $env:GAMEPILOT_LLM_MODEL = "qwen3:4b" # 换成 Ollama 中已经安装且支持�
 真实模型运行受模型版本、机器和服务延迟影响，应与随机/规则/PPO 使用相同任务版本和种子，并披露无效 episode、模型名称及日期。离线单测使用本地模拟 HTTP 服务；没有本地 Ollama 或 API 服务时，不会有真实模型效果数据。
 
 任务集一粒度 smoke 结果见 [task-suite-smoke.md](docs/task-suite-smoke.md)。它验证评测闭环，不是模型能力结论。LLM Agent 设计见 [设计稿](docs/superpowers/specs/2026-11-10-llm-game-task-agent-design.md)。
+
+本地 Ollama JSON Schema 接口的真实模型 smoke 记录见 [llm-provider-smoke.md](docs/llm-provider-smoke.md)。当前记录因单局 Token 预算触发而无效，只证明结构化动作解析、runner 执行和预算停止链路；不代表 `kill_target` 完成，也不能作为模型能力成绩。
 模块边界与数据流见 [架构说明](docs/architecture.md)，可复现对照流程见 [评测协议](docs/evaluation-protocol.md)。
 面向简历的准确项目条目和当前验证边界见 [resume-entry.md](docs/resume-entry.md)。
 

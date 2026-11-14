@@ -7,7 +7,7 @@ import numpy as np
 import pytest
 
 from gamepilot.llm_agent.controller import AgentDecisionError, GameAction, TaskAgent, observation_summary
-from gamepilot.llm_agent.evaluator import evaluate_episode
+from gamepilot.llm_agent.evaluator import evaluate_episode, evaluate_task_agent
 from gamepilot.llm_agent.provider import ChatProvider, ChatResult, ProviderError, ProviderSettings
 from gamepilot.tasks import TASK_DIR, load_task
 
@@ -48,21 +48,39 @@ def fake_http():
     server.server_close()
 
 
-def ollama_envelope(arguments):
-    return {"message": {"role": "assistant", "tool_calls": [{"function": {
-        "name": "step_game", "arguments": arguments}}]}, "prompt_eval_count": 12,
+def test_ollama_provider_uses_json_schema_and_parses_action_and_usage(fake_http):
+    ResponseHandler.envelope = {"message": {"role": "assistant",
+        "content": '{"move":1,"shoot":8,"repeat":5}'}, "prompt_eval_count": 12,
         "eval_count": 4}
-
-
-def test_ollama_provider_parses_tool_call_and_usage(fake_http):
-    ResponseHandler.envelope = ollama_envelope({"move": 1, "shoot": 8, "repeat": 5})
     provider = ChatProvider(ProviderSettings("ollama", "test-model", fake_http))
     result = provider.call_tool([{"role": "user", "content": "test"}], max_repeat=20)
     assert result.tool_name == "step_game"
     assert result.arguments == {"move": 1, "shoot": 8, "repeat": 5}
     assert result.usage == {"prompt_tokens": 12, "completion_tokens": 4}
     assert ResponseHandler.seen["path"] == "/api/chat"
-    assert ResponseHandler.seen["body"]["tools"][0]["function"]["parameters"]["additionalProperties"] is False
+    assert ResponseHandler.seen["body"]["options"]["num_predict"] == 768
+    assert ResponseHandler.seen["body"]["think"] is False
+    assert ResponseHandler.seen["body"]["stream"] is False
+    assert ResponseHandler.seen["body"]["format"]["additionalProperties"] is False
+    assert ResponseHandler.seen["body"]["format"]["properties"]["repeat"]["maximum"] == 20
+
+
+def test_ollama_provider_supports_api_base_url(fake_http):
+    ResponseHandler.envelope = {"message": {"role": "assistant", "content":
+        '{"move":0,"shoot":0,"repeat":1}'}}
+    provider = ChatProvider(ProviderSettings("ollama", "model", fake_http + "/api"))
+    provider.call_tool([], max_repeat=5)
+    assert ResponseHandler.seen["path"] == "/api/chat"
+
+
+def test_ollama_provider_returns_invalid_json_for_bounded_repair():
+    provider = ChatProvider(ProviderSettings("ollama", "model", "http://127.0.0.1"))
+    result = provider._parse({"message": {"role": "assistant", "content": "not json"},
+                              "prompt_eval_count": 4, "eval_count": 2})
+    assert result.tool_name == "step_game"
+    assert result.arguments == "not json"
+    assert result.assistant_message == {"role": "assistant", "content": "not json"}
+    assert result.usage == {"prompt_tokens": 4, "completion_tokens": 2}
 
 
 def test_openai_compatible_provider_sends_auth_and_parses_response(fake_http):
@@ -113,10 +131,10 @@ def test_provider_timeout_is_classified(fake_http):
         ResponseHandler.delay_seconds = 0.0
 
 
-def test_provider_rejects_malformed_tool_call_shape():
+def test_ollama_provider_rejects_non_string_action_content():
     provider = ChatProvider(ProviderSettings("ollama", "model", "http://127.0.0.1"))
-    with pytest.raises(ProviderError, match="invalid_tool_call_shape"):
-        provider._parse({"message": {"tool_calls": ["bad"]}})
+    with pytest.raises(ProviderError, match="invalid_message_content"):
+        provider._parse({"message": {"content": {"move": 0}}})
 
 
 def test_task_agent_repairs_invalid_arguments_once():
@@ -177,6 +195,11 @@ def test_provider_settings_require_model_and_never_default_api_key(monkeypatch):
         ProviderSettings.from_env()
     monkeypatch.setenv("GAMEPILOT_LLM_TIMEOUT_SECONDS", "5")
     assert ProviderSettings.from_env().timeout_seconds == 5
+    monkeypatch.setenv("GAMEPILOT_LLM_MAX_COMPLETION_TOKENS", "1024")
+    assert ProviderSettings.from_env().max_completion_tokens == 1024
+    monkeypatch.setenv("GAMEPILOT_LLM_MAX_COMPLETION_TOKENS", "12")
+    with pytest.raises(ValueError, match="between 64 and 8192"):
+        ProviderSettings.from_env()
 
 
 def test_provider_safe_url_drops_userinfo_and_query_secrets():
@@ -215,6 +238,8 @@ def test_environment_start_failure_is_recorded_as_invalid_episode(tmp_path, monk
     assert row["task_reason"] == "execution_ConnectionError"
     trace = json.loads((tmp_path / "startup-error.json").read_text(encoding="utf-8"))
     assert trace["execution_error"] == "execution_ConnectionError"
+    summary = evaluate_task_agent(TaskAgent(UnusedProvider()), task, seeds=[2000])
+    assert summary["invalid_reasons"] == {"execution_ConnectionError": 1}
 
 
 def test_agent_enforces_per_episode_request_and_token_budgets():
@@ -245,6 +270,48 @@ def test_agent_enforces_per_episode_request_and_token_budgets():
         agent.decide(task, np.zeros(76), {}, decision_index=0)
     assert provider.calls == 3
     assert agent.usage["model_requests"] == 1
+
+
+def test_recent_action_memory_is_bounded_structured_and_cleared_between_episodes():
+    class MemoryProvider:
+        def __init__(self):
+            self.payloads = []
+
+        def call_tool(self, messages, *, max_repeat):
+            self.payloads.append(json.loads(messages[-1]["content"]))
+            return ChatResult("step_game", {"move": 1, "shoot": 3, "repeat": 1},
+                {"role": "assistant", "content": ""},
+                {"prompt_tokens": 2, "completion_tokens": 1})
+
+    provider = MemoryProvider()
+    task = load_task(TASK_DIR / "kill_target.json")
+    agent = TaskAgent(provider, history_window=2)
+    obs_before = np.zeros(76, dtype=np.float32)
+    action = None
+    before_info = {"seconds": 0.0, "health": 5, "damage": 0, "kills": 0,
+                   "pickups_collected": 0}
+    for index in range(3):
+        action, _ = agent.decide(task, obs_before, before_info, decision_index=index)
+        after_info = {"seconds": index + 1.0, "health": 5, "damage": 0,
+                      "kills": index + 1, "pickups_collected": 0}
+        agent.record_transition(before_obs=obs_before, before_info=before_info,
+            action=action, after_obs=obs_before, after_info=after_info,
+            grade={"status": "running", "reason": None}, executed_repeat=1)
+        before_info = after_info
+
+    history = provider.payloads[-1]["recent_history"]
+    assert len(history) == 2
+    assert history[-1]["delta"]["kills"] == 1
+    assert history[-1]["action"] == {"move": 1, "shoot": 3,
+                                      "requested_repeat": 1, "executed_repeat": 1}
+    assert "reasoning" not in json.dumps(history).lower()
+    agent.reset_episode()
+    assert agent.history == []
+    agent.history_window = 0
+    agent.record_transition(before_obs=obs_before, before_info=before_info,
+        action=action, after_obs=obs_before, after_info=before_info,
+        grade={"status": "running", "reason": None}, executed_repeat=1)
+    assert agent.history == []
 
 
 def test_provider_failure_counts_the_attempt_in_agent_usage():

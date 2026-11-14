@@ -1,7 +1,7 @@
 # LLM Game Task Agent Design
 
 Date: 2026-11-10
-Status: First implementation complete on 2026-11-10; automated provider tests and a real-Godot runner smoke pass. A real Ollama/API model run remains unverified because no local Ollama endpoint is currently responding.
+Status: Ollama JSON Schema and OpenAI-compatible function-calling paths are implemented; 43 automated tests pass. A live `qwen3:4b` smoke executed four valid actions before the 6,000-token episode budget stopped the run; this is protocol evidence, not a task capability result. See `docs/llm-provider-smoke.md`.
 
 ## Goal
 
@@ -27,7 +27,7 @@ Build a separate LLM-driven agent that reads the existing task contract, observe
 
 ## Provider and Tool Contracts
 
-- A provider interface owns HTTP transport, request timeouts, model identification, and response parsing. Ollama uses its chat endpoint; other providers use the configured OpenAI-compatible base URL and bearer key.
+- A provider interface owns HTTP transport, request timeouts, model identification, and response parsing. Ollama uses `/api/chat` with a JSON Schema action format and `options.num_predict`; the runner turns the parsed, validated JSON into the bounded `step_game` action. OpenAI-compatible providers use native function calling with the configured base URL and bearer key.
 - Tool arguments are strict JSON with `move` and `shoot` integer indices in `[0, 8]` and `repeat` in `[1, max_repeat]`. No arbitrary Python, shell, filesystem, or network tool is available to the model.
 - The runner, not the model, owns reset, seed, environment lifecycle, reward, terminal state, task grading, and output files.
 - Logs include provider/model, task hash, code hash, seed, validated tool calls, observations, timing, token usage when provided, and failure category. Secrets and full hidden reasoning are excluded.
